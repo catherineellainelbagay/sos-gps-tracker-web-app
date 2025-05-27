@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import SendTestData from './SendTestData';
 
+
 // Fix marker icon issue
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -16,10 +17,12 @@ L.Icon.Default.mergeOptions({
     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+
 const responder = {
-  latitude: 14.3137,
-  longitude: 121.0809,
+  latitude: 14.31,
+  longitude: 121.08,
 };
+
 
 function haversineDistance([lat1, lon1], [lat2, lon2]) {
   const R = 6371;
@@ -34,9 +37,11 @@ function haversineDistance([lat1, lon1], [lat2, lon2]) {
   return R * c;
 }
 
+
 function Dashboard() {
   const [location, setLocation] = useState(null);
   const [distance, setDistance] = useState(null);
+
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -61,10 +66,12 @@ function Dashboard() {
       }
     };
 
+
     fetchLocation();
     const interval = setInterval(fetchLocation, 5000);
     return () => clearInterval(interval);
   }, []);
+
 
   const linePositions =
     location && responder
@@ -74,13 +81,14 @@ function Dashboard() {
         ]
       : [];
 
+
   return (
     <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-xl text-center">
-      <h2 className="text-xl font-semibold mb-2 text-gray-700">Live GPS Tracker</h2>
+      <h2 className="text-xl font-bold mb-2 text-gray-700">Live GPS Tracker</h2>
       {location ? (
         <>
-          <p className="mb-1">User: {location.latitude}, {location.longitude}</p>
-          <p className="mb-1">Responder: {responder.latitude}, {responder.longitude}</p>
+          <p className="mb-1 text-red-400 font-bold">User - Latitude: {location.latitude}, Longitude: {location.longitude}</p>
+          <p className="mb-1 font-semibold">Responder - Latitude: {responder.latitude}, Longitude: {responder.longitude}</p>
           <p className="mb-4 text-blue-600 font-semibold">Distance: {distance} km</p>
           <MapContainer
             center={[location.latitude, location.longitude]}
@@ -107,6 +115,7 @@ function Dashboard() {
         <p className="text-gray-500 mb-4">⏳ Waiting for valid GPS data...</p>
       )}
 
+
       <div className="mt-6 flex justify-center">
         <SendTestData />
       </div>
@@ -114,4 +123,8 @@ function Dashboard() {
   );
 }
 
+
 export default Dashboard;
+
+
+
