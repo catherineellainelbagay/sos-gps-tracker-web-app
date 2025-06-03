@@ -7,9 +7,9 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 api = Api(app, version='1.0', title='SOS Tracker API',
-          description='API documentation for SOS GPS Tracker System with location, status, and diagnostics.')
+          description='API documentation for SOS GPS Tracker System')
 
-# Database utility
+# Database helper
 def get_db_connection():
     conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
@@ -17,16 +17,16 @@ def get_db_connection():
 
 # Swagger models
 location_model = api.model('Location', {
-    'latitude': fields.Float(required=True, description='Latitude'),
-    'longitude': fields.Float(required=True, description='Longitude')
+    'latitude': fields.Float(required=True),
+    'longitude': fields.Float(required=True)
 })
 
 status_model = api.model('Status', {
-    'button': fields.String(required=True, description='SOS Button State'),
-    'battery': fields.Float(required=True, description='Battery Level in %')
+    'button': fields.String(required=True),
+    'battery': fields.Float(required=True)
 })
 
-# Location endpoint
+# Endpoints
 @api.route('/api/location')
 class LocationAPI(Resource):
     @api.expect(location_model)
@@ -43,7 +43,6 @@ class LocationAPI(Resource):
         conn.close()
         return {'message': 'Location stored'}, 201
 
-# Status endpoint
 @api.route('/api/status')
 class StatusAPI(Resource):
     @api.expect(status_model)
@@ -60,20 +59,53 @@ class StatusAPI(Resource):
         conn.close()
         return {'message': 'Status updated'}, 200
 
-# Latest location endpoint
-@api.route('/api/location/latest')
-class LatestLocationAPI(Resource):
+@api.route('/api/emergency')
+class EmergencyAPI(Resource):
+    @api.expect(location_model)
+    def post(self):
+        data = request.get_json()
+        lat = data.get('latitude')
+        lon = data.get('longitude')
+        timestamp = datetime.utcnow()
+
+        conn = get_db_connection()
+        conn.execute('DELETE FROM emergency')
+        conn.execute('INSERT INTO emergency (latitude, longitude, timestamp, is_active, is_acknowledged) VALUES (?, ?, ?, 1, 0)',
+                     (lat, lon, timestamp))
+        conn.commit()
+        conn.close()
+        return {'message': 'Emergency reported'}, 201
+
     def get(self):
         conn = get_db_connection()
-        location = conn.execute('SELECT * FROM locations ORDER BY timestamp DESC LIMIT 1').fetchone()
+        row = conn.execute('SELECT * FROM emergency WHERE is_active = 1 ORDER BY timestamp DESC LIMIT 1').fetchone()
         conn.close()
-        return dict(location) if location else {}
+        return dict(row) if row else {}
 
-# Initialize database tables
+@api.route('/api/emergency/acknowledge')
+class EmergencyAcknowledgeAPI(Resource):
+    def post(self):
+        conn = get_db_connection()
+        conn.execute('UPDATE emergency SET is_acknowledged = 1 WHERE is_active = 1')
+        conn.commit()
+        conn.close()
+        return {'message': 'Emergency acknowledged'}, 200
+
+@api.route('/api/emergency/reset')
+class EmergencyResetAPI(Resource):
+    def post(self):
+        conn = get_db_connection()
+        conn.execute('UPDATE emergency SET is_active = 0')
+        conn.commit()
+        conn.close()
+        return {'message': 'Emergency cleared'}, 200
+
+# Initialize DB
 def init_db():
     conn = sqlite3.connect('database.db')
-    conn.execute('CREATE TABLE IF NOT EXISTS locations (id INTEGER PRIMARY KEY AUTOINCREMENT, latitude REAL, longitude REAL, timestamp TEXT)')
-    conn.execute('CREATE TABLE IF NOT EXISTS status (id INTEGER PRIMARY KEY AUTOINCREMENT, button TEXT, battery REAL, timestamp TEXT)')
+    conn.execute('CREATE TABLE IF NOT EXISTS locations (id INTEGER PRIMARY KEY, latitude REAL, longitude REAL, timestamp TEXT)')
+    conn.execute('CREATE TABLE IF NOT EXISTS status (id INTEGER PRIMARY KEY, button TEXT, battery REAL, timestamp TEXT)')
+    conn.execute('CREATE TABLE IF NOT EXISTS emergency (id INTEGER PRIMARY KEY, latitude REAL, longitude REAL, timestamp TEXT, is_active INTEGER DEFAULT 1, is_acknowledged INTEGER DEFAULT 0)')
     conn.commit()
     conn.close()
 
