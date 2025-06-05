@@ -100,6 +100,18 @@ class EmergencyResetAPI(Resource):
         conn.close()
         return {'message': 'Emergency cleared'}, 200
 
+@api.route('/api/emergency/ack/status')
+class EmergencyAckStatusAPI(Resource):
+    def get(self):
+        conn = get_db_connection()
+        row = conn.execute('SELECT is_acknowledged FROM emergency WHERE is_active = 1 ORDER BY timestamp DESC LIMIT 1').fetchone()
+        conn.close()
+
+        if row:
+            return jsonify({'acknowledged': bool(row['is_acknowledged'])})
+        else:
+            return jsonify({'acknowledged': False})
+
 # Initialize DB
 def init_db():
     conn = sqlite3.connect('database.db')
