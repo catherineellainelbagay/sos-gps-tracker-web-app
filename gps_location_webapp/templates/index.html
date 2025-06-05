@@ -21,7 +21,6 @@
             padding: 10px;
             margin: 0;
         }
-
         .map-container {
             width: 90%;
             max-width: 600px;
@@ -32,19 +31,16 @@
             background-color: #fff;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
-
         .info {
             padding: 10px;
             font-size: 16px;
         }
-
         #map {
             height: 300px;
             width: 100%;
             border-radius: 8px;
             margin-top: 10px;
         }
-
         button {
             padding: 10px 20px;
             font-size: 16px;
@@ -59,13 +55,12 @@
         button:hover {
             background-color: #d32f2f;
         }
-
         .info-row {
             display: none;
         }
     </style>
 </head>
-<body>
+<body onclick="enableSoundOnce()">
     <h2> SOS GPS Location Tracker </h2>
 
     <div class="map-container">
@@ -74,7 +69,7 @@
             <p class="info-row" id="lngRow"><strong>Longitude:</strong> <span id="lng">Loading...</span></p>
             <p class="info-row" id="timeRow"><strong>Last Updated:</strong> <span id="timestamp">Loading...</span></p>
             <p class="info-row" id="distRow"><strong>Distance from Police Station:</strong> <span id="distance">Calculating...</span></p>
-            <button onclick="loadMap()">🔁 Refresh Location</button>
+            <button onclick="fetchLocationAndUpdateMap()">🔁 Refresh Location</button>
         </div>
 
         <div id="map"></div>
@@ -87,6 +82,8 @@
 
     <script>
         let map, marker, polyline;
+        let lastTimestamp = "";
+        let soundEnabled = false;
 
         const policeStation = [14.3125, 121.0796];
 
@@ -99,8 +96,7 @@
             shadowSize: [41, 41]
         });
 
-        // Initial map setup with police station only
-        window.onload = function() {
+        window.onload = function () {
             map = L.map('map').setView(policeStation, 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
@@ -110,21 +106,35 @@
             L.marker(policeStation).addTo(map)
                 .bindPopup("Biñan City Police Station (Brgy Zapote)")
                 .openPopup();
+
+            fetchLocationAndUpdateMap();
+            setInterval(fetchLocationAndUpdateMap, 5000); // Poll every 5 seconds
         };
 
-        async function loadMap() {
+        function enableSoundOnce() {
+            const audio = document.getElementById("alertSound");
+            audio.play().then(() => {
+                soundEnabled = true;
+                console.log("Sound enabled.");
+            }).catch(err => {
+                console.warn("Sound play blocked until interaction.", err);
+            });
+            document.body.onclick = null;
+        }
+
+        async function fetchLocationAndUpdateMap() {
             try {
                 const res = await fetch('/api/location');
                 const data = await res.json();
 
                 const lat = parseFloat(data.latitude);
                 const lng = parseFloat(data.longitude);
-                const time = data.timestamp || "Not available";
+                const timestamp = data.timestamp || "Not available";
                 const location = [lat, lng];
 
                 document.getElementById("lat").innerText = lat.toFixed(6);
                 document.getElementById("lng").innerText = lng.toFixed(6);
-                document.getElementById("timestamp").innerText = time;
+                document.getElementById("timestamp").innerText = timestamp;
 
                 document.getElementById("latRow").style.display = "block";
                 document.getElementById("lngRow").style.display = "block";
@@ -147,7 +157,6 @@
                     weight: 3
                 }).addTo(map);
 
-                // Calculate and display distance
                 const R = 6371;
                 const dLat = (lat - policeStation[0]) * Math.PI / 180;
                 const dLng = (lng - policeStation[1]) * Math.PI / 180;
@@ -159,10 +168,13 @@
 
                 document.getElementById("distance").innerText = distance + " km";
 
-                document.getElementById("alertSound").play();
+                // ✅ Play sound only if timestamp is new
+                if (soundEnabled && timestamp !== lastTimestamp) {
+                    document.getElementById("alertSound").play();
+                    lastTimestamp = timestamp;
+                }
             } catch (err) {
-                alert("Failed to fetch location. Please try again.");
-                console.error(err);
+                console.error("Failed to fetch location", err);
             }
         }
     </script>
