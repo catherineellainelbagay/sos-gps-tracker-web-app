@@ -5,8 +5,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
 
     <style>
         body {
@@ -67,6 +69,7 @@
 <body>
     <h2>📍 SOS GPS Location Tracker</h2>
 
+
     <div class="map-container">
         <div class="info" id="info">
             <p><strong>Latitude:</strong> <span id="lat"></span></p>
@@ -75,22 +78,27 @@
             <p><strong>Distance from Police Station:</strong> <span id="distance"></span></p>
         </div>
 
+
         <button onclick="showLocation()">📍 Show Location</button>
         <button onclick="loadHistory()">🕘 Show History</button>
         <div id="map"></div>
         <ul id="historyList"></ul>
     </div>
 
+
     <audio id="alertSound" src="https://www.soundjay.com/button/sounds/beep-10.mp3" preload="auto"></audio>
+
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 
     <script>
         let map, sosMarker, polyline;
         const policeStation = [14.3125, 121.0796];
         let lastTimestamp = null;
         let latestData = null;
+
 
         const redIcon = L.icon({
             iconUrl: 'https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-red.png',
@@ -101,6 +109,7 @@
             shadowSize: [41, 41]
         });
 
+
         function initializeMap() {
             map = L.map('map').setView(policeStation, 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -108,15 +117,18 @@
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
 
+
             L.marker(policeStation)
                 .addTo(map)
                 .bindPopup("Biñan City Police Station (Brgy Zapote)")
                 .openPopup();
         }
 
+
         async function checkForNewLocation() {
             const res = await fetch('/api/location');
             const data = await res.json();
+
 
             if (data.timestamp && data.timestamp !== lastTimestamp) {
                 latestData = data;
@@ -126,21 +138,25 @@
             }
         }
 
+
         async function showLocation() {
             if (!latestData) {
                 alert("No new SOS data available.");
                 return;
             }
 
+
             const lat = parseFloat(latestData.latitude);
             const lng = parseFloat(latestData.longitude);
             const time = latestData.timestamp;
             const location = [lat, lng];
 
+
             document.getElementById("lat").innerText = lat.toFixed(6);
             document.getElementById("lng").innerText = lng.toFixed(6);
             document.getElementById("timestamp").innerText = time;
             document.getElementById("info").style.display = 'block';
+
 
             if (!sosMarker) {
                 sosMarker = L.marker(location, { icon: redIcon }).addTo(map).bindPopup('SOS Location').openPopup();
@@ -148,15 +164,18 @@
                 sosMarker.setLatLng(location);
             }
 
+
             if (polyline) {
                 map.removeLayer(polyline);
             }
+
 
             polyline = L.polyline([policeStation, location], {
                 color: 'blue',
                 dashArray: '10, 10',
                 weight: 3
             }).addTo(map);
+
 
             // Calculate distance
             const R = 6371;
@@ -168,8 +187,10 @@
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             const distance = (R * c).toFixed(2);
 
+
             document.getElementById("distance").innerText = distance + " km";
         }
+
 
         async function loadHistory() {
             const res = await fetch('/api/history');
@@ -177,10 +198,12 @@
             const list = document.getElementById("historyList");
             list.innerHTML = '';
 
+
             if (data.length === 0) {
                 list.innerHTML = "<li>No SOS records yet.</li>";
                 return;
             }
+
 
             data.reverse().forEach((item, index) => {
                 const li = document.createElement("li");
@@ -188,6 +211,7 @@
                 list.appendChild(li);
             });
         }
+
 
         window.onload = () => {
             initializeMap();                  // Always show map
@@ -197,3 +221,6 @@
     </script>
 </body>
 </html>
+
+
+
